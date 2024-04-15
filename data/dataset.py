@@ -174,3 +174,42 @@ class ColorizationDataset(data.Dataset):
         return len(self.flist)
 
 
+class TerrainDataset(data.Dataset):
+    def __init__(self, data_root, data_len=-1, image_size=[256,256], loader=pil_loader):
+        self.data_root = data_root
+        self.data_len = data_len
+        self.tfs = transforms.Compose([
+                transforms.Resize((image_size[0], image_size[1])),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5,0.5, 0.5])
+        ])
+        self.loader = loader
+        self.image_size = image_size
+
+    def __getitem__(self, index):
+        ret = {}
+        file_name = str(index) + '.png'
+
+        img = self.loader(file_name)
+        width, height = img.size
+        left = 0
+        top_cond = 0
+        top_org = height/2
+        right = width
+        bottom_cond = height/2
+        bottom_org = height
+
+        cond_image = img.crop((left, top_cond, right, bottom_cond))
+        img = img.crop((left, top_org, right, bottom_org))
+
+        img = self.tfs(img)
+        cond_image = self.tfs(img)
+
+        ret['gt_image'] = img
+        ret['cond_image'] = cond_image
+        ret['path'] = file_name
+        return ret
+
+    def __len__(self):
+        return self.data_len
+
